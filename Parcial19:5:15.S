@@ -1,16 +1,15 @@
 # Pasar a MIPS, usando la convencion de llamadas a funciones implementadas en los trabajos practicos
-# static int pg_ascii2wchar_with_len(const unsigned char* from, pg_wchar *to, int len) {
-# 	int cnt = 0;
-# 	while ( len > 0 && *from) {
-# 		*to++ = *from++;
-# 		len-;
-# 		cnt++;
+# size_t strlen(const char* s, size_t maxlen) {
+# 	size_t len;	
+# 	
+#	for (len = 0; len < maxlen; len++, s++) {
+# 		if (!*s)
+# 			break;
 # 	}
-# 	*to = 0;
-# 	return cnt;
+# 	return len;
 # }
 
-# Es una funcion hoja, no guardo ra ni reservo SRA.
+# Es una funcion leaf, no guardo ra ni reservo SRA.
 # Stack Frame -> 8
 # 	_________________
 # 4|    	gp		 |
@@ -18,12 +17,12 @@
 #   -----------------
 
 .begin
-.globl pg_ascii2wchar_with_len
-.ent pg_ascii2wchar_with_len
+.globl strlen
+.ent strlen
 .align 2
 .set noreorder
 
-pg_ascii2wchar_with_len:	
+strlen:	
 
 # Inicializo Stack Frame
 .apload t9
@@ -34,19 +33,17 @@ pg_ascii2wchar_with_len:
 							move $fp, sp	
 
 # Salvo los valores pasados por parámetro
-							sw	a0, 8($fp)		#a0 = *from
-							sw	a1, 12($fp)		#a1 = *to
-							sw	a2, 16($fp)		#a2 = len
-							move t1, zero		#t1 = cnt = 0
+							sw	a0, 8($fp)		#a0 = s
+							sw	a1, 12($fp)		#a1 = maxlen
+							
+							move t1, zero		#t1 = len = 0
 
-					loop:	blez a2, FIN
-							lb	t0, 0(a0)		#t0 = *from
-							beqz t0, FIN
-							sb t0, 0(a1)		#*to = *from
-							addiu a0, a0, 1 	#*from++
-							addiu a1, a1, 1 	#*to++
-							subu a2, a2, 1 		#len--
-							addiu t1, t1, 1 	#cnt++
+					loop:	subu t2,t1,a1		#t1-a0
+							beqz t2, FIN 		#b if len == maxlen
+							lb	t0, 0(a0)		#t0 = *s
+							addiu t1, t1, 1
+							addiu a0,a0,1  		#1 byte por char
+							beqz t0, FIN 		#termino de recorrer s
 							b loop
 
 					FIN:	move v0, t1
